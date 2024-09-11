@@ -8,21 +8,39 @@ namespace ApiRabbitMq.RabbitMQ.Impl;
 
 public class RabbitMQProducer : IRabbitMQProducer
 {
-    public void SendProductMessage<T>(T message)
+    private IConnection _connection;
+    private IModel _channel;
+
+    public RabbitMQProducer()
     {
         var factory = new ConnectionFactory
         {
             HostName = "localhost"
         };
+        
+        _connection = factory.CreateConnection();
+        _channel = _connection.CreateModel();
+        _channel.QueueDeclare("product", exclusive: false);
+    }
+    
+    public void SendProductMessage<T>(T message)
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(message);
+            var body = Encoding.UTF8.GetBytes(json);
+            _channel.BasicPublish(exchange: "", routingKey: "product", body: body);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao enviar mensagem: {ex.Message}");
+        }
+    }
 
-        var connection = factory.CreateConnection();
-        using var channel = connection.CreateModel();
 
-        channel.QueueDeclare("product", exclusive: false);
-
-        var json = JsonSerializer.Serialize(message);
-        var body = Encoding.UTF8.GetBytes(json);
-
-        channel.BasicPublish(exchange: "", routingKey: "product", body: body);
+    public void Close()
+    {
+        _channel.Close();
+        _connection.Close();
     }
 }

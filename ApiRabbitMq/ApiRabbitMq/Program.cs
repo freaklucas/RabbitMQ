@@ -32,4 +32,10 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+app.Lifetime.ApplicationStopping.Register(() =>
+{
+    var rabbitMQProducer = app.Services.GetRequiredService<IRabbitMQProducer>() as RabbitMQProducer;
+    rabbitMQProducer?.Close();
+});
+
 app.Run();
